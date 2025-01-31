@@ -31,8 +31,8 @@ const Receive = () => {
     <Window>
       <HStack width="600px" margin="20px auto">
         <HStack cursor={"pointer"} onClick={handleBackClick}>
-          <IconBack/>
-          <Text ml={"15px"} fontSize={"14px"} fontWeight={"bold"} opacity={".3"}>
+          <IconBack style={{ width: "15px", height: "15px" }}/>
+          <Text ml={"5px"} fontSize={"14px"} fontWeight={"bold"} opacity={".3"}>
             back
           </Text>
         </HStack>

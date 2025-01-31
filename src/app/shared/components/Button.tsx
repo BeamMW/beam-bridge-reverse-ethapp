@@ -4,7 +4,7 @@ import { ButtonVariant, Pallete } from '@core/types';
 import { HStack, Text } from '@chakra-ui/react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  icon?: React.FC;
+  icon?: React.FC<React.SVGAttributes<SVGElement>>;
   pallete?: Pallete;
   variant?: ButtonVariant;
 }
@@ -188,7 +188,7 @@ const Button: React.FC<ButtonProps> = ({
   return (
     <ButtonComponent type={type} pallete={pallete} {...rest}>
       <HStack>
-        {!!IconComponent && <IconComponent />}
+        {!!IconComponent && <IconComponent style={{ width: "15px", height: "15px" }}/>}
         <Text>{children}</Text>
       </HStack>
     </ButtonComponent>

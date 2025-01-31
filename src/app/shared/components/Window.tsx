@@ -35,7 +35,7 @@ const Window: React.FC<WindowProps> = ({
             <AccountButtonWithModal />
           </Box>
 
-          <Text textAlign={"center"} fontSize={"46px"} fontWeight={"900"} margin={"20px 0 50px"}>
+          <Text textAlign={"center"} fontSize={"46px"} fontWeight={"900"} margin={"20px 0 10px"}>
             WBEAM ({chain?.name}) ={'>'} BEAM Bridge
           </Text>
         </VStack>       

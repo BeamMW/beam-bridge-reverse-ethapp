@@ -9,7 +9,6 @@ import {
   ModalBody,
   useDisclosure,
   VStack,
-  Box,
   Img,
   Text,
 } from "@chakra-ui/react";
@@ -38,7 +37,7 @@ const ConnectButtonWithModal = () => {
               {
                 connectors.map((connector) => (
                   <Button key={connector.uid} onClick={() => connect({ connector })} width={"200px"}>
-                    { connector.name === "MetaMask" ? <IconMetamask /> : ""}
+                    { connector.name === "MetaMask" ? <IconMetamask width={"34px"} height={"34px"}/> : ""}
                     { connector.icon && <Img src={connector.icon} width={"34px"} height={"34px"}></Img> }
                     <Text ml={"5px"}>{connector.name}</Text>
                   </Button>

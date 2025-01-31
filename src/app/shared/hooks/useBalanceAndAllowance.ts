@@ -13,7 +13,6 @@ interface UseTokenBalanceAndAllowanceResult {
   allowance: bigint | undefined;
   ethBalance: bigint | undefined;
   isLoading: boolean;
-  triggerUpdate: () => void;
   error: Error | null;
 }
 
@@ -22,7 +21,6 @@ export const useTokenBalanceAndAllowance = ({
   activeChainId,
 }: UseTokenBalanceAndAllowanceProps): UseTokenBalanceAndAllowanceResult => {
   const tokenAddress = CURRENCIES[activeChainId]?.[CURRENCY_IDS.BEAM].ethTokenContract as `0x${string}`;
-  const [trigger, setTrigger] = useState(0);
 
   const { data: ethBalance, isError } = useBalance({
     query: {
@@ -30,10 +28,6 @@ export const useTokenBalanceAndAllowance = ({
     },
     address,
   });
-
-  const triggerUpdate = () => {
-    setTrigger(prev => prev + 1);
-  };
 
   const {
     data: tokenBalance,
@@ -69,7 +63,6 @@ export const useTokenBalanceAndAllowance = ({
     ethBalance: ethBalance?.value,
     allowance: allowance as bigint | undefined,
     isLoading,
-    triggerUpdate,
     error,
   };
 };

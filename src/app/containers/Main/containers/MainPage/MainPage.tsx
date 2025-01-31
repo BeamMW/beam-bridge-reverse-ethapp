@@ -34,7 +34,6 @@ const ContentHeader = styled.p`
 `;
 
 const StyledControls = styled.div`
-  margin-top: 50px;
   display: flex;
   flex-direction: row;
 `;
@@ -89,17 +88,12 @@ const MainPage: React.FC = () => {
   const systemState = useSelector(selectSystemState());
   const isTrInProgress = useSelector(selectIsTrInProgress());
   const [tableData, setTableData] = useState([]);
-  const [tokenAllowance, setTokenAllowance] = useState<boolean>();
   const { address, chain: activeChain, connector } = useAccount();
 
-  const { tokenBalance, ethBalance, allowance, isLoading, triggerUpdate, error } = useTokenBalanceAndAllowance({
+  const { tokenBalance, ethBalance, allowance } = useTokenBalanceAndAllowance({
     address: address as `0x${string}`,
     activeChainId: activeChain?.id as number,
   });
-
-  useEffect(() => {
-    setTokenAllowance(!!allowance)
-  }, [allowance])
 
   useEffect(() => {
     // if (bridgeTransactions.length > 0) {
@@ -212,7 +206,7 @@ const MainPage: React.FC = () => {
         </StyledControls>
         <Content>
           <ContentHeader>Balance</ContentHeader>
-          <TokenCard 
+          <TokenCard
             isApproved={true}
             isToken={false}
             title={"eth"}

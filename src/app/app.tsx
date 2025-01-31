@@ -71,6 +71,7 @@ const App = () => {
       global: {
         body: {
           color: "white",
+          backgroundColor: "#0C4379",
         },
       },
     },

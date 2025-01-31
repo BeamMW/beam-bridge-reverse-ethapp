@@ -13,7 +13,7 @@ interface TokenCardProps {
   isToken: boolean;
   isApproved: boolean;
   title: string;
-  icon: React.FC;
+  icon: React.FC<React.SVGAttributes<SVGElement>>;
   balance?: bigint;
 }
 
@@ -99,7 +99,7 @@ const TokenCard: React.FC<TokenCardProps> = ({
   
   return (
     <CardStyled type={title} isWithBalance={balance !== undefined} {...rest}>
-      <Icon />
+      <Icon style={{width: "30px", height: "30px"}}/>
       <BalanceStyled>
         <BalanceValue>{floatFormat(utils.formatEther(weiBigNumberBalance))} {cardTitle}</BalanceValue>
       </BalanceStyled>

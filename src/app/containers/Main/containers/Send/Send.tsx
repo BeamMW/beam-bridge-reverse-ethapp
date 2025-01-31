@@ -23,6 +23,7 @@ import { ethId, CURRENCIES, ETH_RATE_ID } from '@app/shared/constants';
 import { selectBalance, selectIsApproveInProgress, selectRate } from '../../store/selectors';
 import { useFormik } from 'formik';
 import { Currency } from '@app/core/types';
+import { HStack, Text } from '@chakra-ui/react';
 
 const metaMaskController = MetaMaskController.getInstance();
 const BEAM_ADDRESS_LENGTH = 66;
@@ -510,14 +511,14 @@ const Send = () => {
 
   return (
     <Window>
-      <ControlStyled>
-        <div className='back' onClick={handleBackClick}>
-          <IconBack/>
-          <div className='back-text'>
+      <HStack width="600px" margin="20px auto">
+        <HStack cursor={"pointer"} onClick={handleBackClick}>
+          <IconBack style={{ width: "15px", height: "15px" }}/>
+          <Text ml={"5px"} fontSize={"14px"} fontWeight={"bold"} opacity={".3"}>
             back
-          </div>
-        </div>
-      </ControlStyled>
+          </Text>
+        </HStack>
+      </HStack>
       <FormStyled autoComplete="off" noValidate onSubmit={handleSubmit}>
         <p className='title'>Ethereum to Beam</p>
         <FormSubtitle>BEAM BRIDGE ADDRESS</FormSubtitle>
