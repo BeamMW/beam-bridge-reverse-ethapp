@@ -1,6 +1,7 @@
 import React from 'react';
 import { styled } from '@linaria/react';
 import { ButtonVariant, Pallete } from '@core/types';
+import { HStack, Text } from '@chakra-ui/react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.FC;
@@ -186,8 +187,10 @@ const Button: React.FC<ButtonProps> = ({
 
   return (
     <ButtonComponent type={type} pallete={pallete} {...rest}>
-      {!!IconComponent && <IconComponent />}
-      {children}
+      <HStack>
+        {!!IconComponent && <IconComponent />}
+        <Text>{children}</Text>
+      </HStack>
     </ButtonComponent>
   );
 };

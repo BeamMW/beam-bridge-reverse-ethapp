@@ -4,13 +4,16 @@ import { css } from '@linaria/core';
 
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Window, Button, Table, BalanceCard } from '@app/shared/components';
+import { Window, Table, BalanceCard, TokenCard } from '@app/shared/components';
 import { selectBalance, selectIsTrInProgress } from '../../store/selectors';
-import { IconSend, IconReceive } from '@app/shared/icons';
+import { IconSend, IconReceive, IconEth, IconBeam } from '@app/shared/icons';
 import { CURRENCIES, ROUTES } from '@app/shared/constants';
 import { selectSystemState, selectTransactions } from '@app/shared/store/selectors';
 import { IconDeposit, IconConfirm } from '@app/shared/icons';
 import { formatActiveAddressString } from '@core/appUtils';
+import { Button, Text } from '@chakra-ui/react';
+import { useAccount } from 'wagmi';
+import { useTokenBalanceAndAllowance } from '@app/shared/hooks';
 
 const Content = styled.div`
   width: 600px;
@@ -86,19 +89,28 @@ const MainPage: React.FC = () => {
   const systemState = useSelector(selectSystemState());
   const isTrInProgress = useSelector(selectIsTrInProgress());
   const [tableData, setTableData] = useState([]);
+  const [tokenAllowance, setTokenAllowance] = useState<boolean>();
+  const { address, chain: activeChain, connector } = useAccount();
+
+  const { tokenBalance, ethBalance, allowance, isLoading, triggerUpdate, error } = useTokenBalanceAndAllowance({
+    address: address as `0x${string}`,
+    activeChainId: activeChain?.id as number,
+  });
 
   useEffect(() => {
-    if (bridgeTransactions.length > 0) {
-      const data = bridgeTransactions.map((tr) => {
-        const item = { ...tr };
-        item['isIncome'] = systemState.account === tr.to;
-        return item;
-      });
-      setTableData(data);
-    }
-  }, [bridgeTransactions]);
+    setTokenAllowance(!!allowance)
+  }, [allowance])
 
-  const balance = useSelector(selectBalance());
+  useEffect(() => {
+    // if (bridgeTransactions.length > 0) {
+    //   const data = bridgeTransactions.map((tr) => {
+    //     const item = { ...tr };
+    //     item['isIncome'] = systemState.account === tr.to;
+    //     return item;
+    //   });
+    //   setTableData(data);
+    // }
+  }, [bridgeTransactions]);
 
   const getDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
@@ -173,37 +185,53 @@ const MainPage: React.FC = () => {
     <>
       <Window>
         <StyledControls>
-          <Button icon={IconSend}
-            disabled={isTrInProgress || systemState.isCorrectNetwork === false}
-            pallete="purple"
+          <Button //icon={IconSend}
+            disabled={isTrInProgress}
+            backgroundColor={"#da68f5"}
+            borderRadius={"22px"}
+            fontWeight={"bold"}
+            padding={"0 30px"}
             onClick={handleSendClick}>
-              WBEAM (Ethereum) ={'>'} BEAM
+              <IconSend />
+              <Text ml={"10px"}>
+                WBEAM (Ethereum) ={'>'} BEAM
+              </Text>
           </Button>
-          <Button icon={IconReceive} 
-            className={ReceiveButtonClass} 
-            disabled={systemState.isCorrectNetwork === false}
-            pallete="blue" 
+          <Button
+            className={ReceiveButtonClass}
+            backgroundColor={"#0bccf7"}
+            borderRadius={"22px"}
+            fontWeight={"bold"}
+            padding={"0 30px"}
             onClick={handleReceiveClick}>
-              BEAM ={'>'} WBEAM (Ethereum)
+              <IconReceive />
+              <Text ml={"10px"}>
+                BEAM ={'>'} WBEAM (Ethereum)
+              </Text>
           </Button>
         </StyledControls>
         <Content>
           <ContentHeader>Balance</ContentHeader>
-          { balance.map(({ curr_id, rate_id, value, icon, is_approved }) => (
-            <BalanceCard icon={icon} 
-              curr_id={curr_id}
-              key={curr_id}
-              rate_id={rate_id}
-              type={icon}
-              balanceValue={value}
-              is_approved={is_approved}
-            ></BalanceCard>
-          ))}
+          <TokenCard 
+            isApproved={true}
+            isToken={false}
+            title={"eth"}
+            icon={IconEth}
+            balance={ethBalance}
+          />
+
+          <TokenCard 
+            isApproved={!!allowance}
+            isToken={true}
+            title={"beam"}
+            icon={IconBeam}
+            balance={tokenBalance}
+          />
         </Content>
-        <StyledTable>
+        {/* <StyledTable>
           <Table config={TABLE_CONFIG} data={tableData} keyBy='transactionIndex'/>
           {tableData.length === 0 && <EmptyTableContent>There are no transactions yet</EmptyTableContent>}
-        </StyledTable>
+        </StyledTable> */}
       </Window>
     </>
   );

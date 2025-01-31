@@ -4,7 +4,7 @@ import {
 
 import { eventChannel, END } from 'redux-saga';
 import { actions as mainActions } from '@app/containers/Main/store/index';
-import { navigate, setAccountState, setIsCorrectNetwork } from '@app/shared/store/actions';
+import { navigate, setIsCorrectNetwork } from '@app/shared/store/actions';
 import store from '../../../index';
 
 import { actions } from '@app/shared/store/index';
@@ -18,116 +18,124 @@ const metaMaskController = MetaMaskController.getInstance();
 
 const CHAIN_ID = '1';
 
-function initApp(account: string) {
-  store.dispatch(setAccountState(account));
-  store.dispatch(setIsLoggedIn(true));
-  metaMaskController.init();
-  store.dispatch(mainActions.loadRate.request());
-}
+// function initApp(account: string) {
+//   store.dispatch(setAccountState(account));
+//   store.dispatch(setIsLoggedIn(true));
+//   metaMaskController.init();
+//   store.dispatch(mainActions.loadRate.request());
+// }
 
-export function remoteEventChannel() {
-  return eventChannel((emitter) => {
-    if (MetaMaskOnboarding.isMetaMaskInstalled()) {
-      window.ethereum
-        .request({ method: 'eth_accounts' })
-        .then(accounts => emitter({event: 'account_loaded', data: accounts}));
+// export function remoteEventChannel() {
+//   return eventChannel((emitter) => {
+//     if (MetaMaskOnboarding.isMetaMaskInstalled()) {
+//       window.ethereum
+//         .request({ method: 'eth_accounts' })
+//         .then(accounts => emitter({event: 'account_loaded', data: accounts}));
 
-      window.ethereum.on('accountsChanged', accounts => emitter({event: 'account_changed', data: accounts}));
+//       window.ethereum.on('accountsChanged', accounts => emitter({event: 'account_changed', data: accounts}));
 
-      window.ethereum.on('chainChanged', () => emitter({event: 'chain_changed'}));
+//       window.ethereum.on('chainChanged', () => emitter({event: 'chain_changed'}));
 
-      window.ethereum.on('connect', (connectInfo) => {
-        emitter({event: 'connected_chain', data: connectInfo})
-      })
-    } else {
-      setTimeout(()=>emitter({event: 'metamask_not_installed'}), 0)
-    }
+//       window.ethereum.on('connect', (connectInfo) => {
+//         emitter({event: 'connected_chain', data: connectInfo})
+//       })
+//     } else {
+//       setTimeout(()=>emitter({event: 'metamask_not_installed'}), 0)
+//     }
 
-    const unsubscribe = () => {
-      emitter(END);
-    };
+//     const unsubscribe = () => {
+//       emitter(END);
+//     };
 
-    return unsubscribe;
-  });
-}
+//     return unsubscribe;
+//   });
+// }
 
 
-export function* handleTransactions(payload, isTimeout: boolean = false) {
-  let result = [];
-  try {
-    for (var item of CURRENCIES) {
-      const trs = yield call(metaMaskController.loadTransactions, payload, 
-        item.id == ethId ? item.ethPipeContract : item.ethTokenContract, item.id);
-      result = result.concat(trs);
-    }
-  } catch (e) {
-    console.log(e);
-  }
-  yield put(actions.setTransactions(result));
-  store.dispatch(mainActions.loadAppParams.request(null));
+// export function* handleTransactions(payload, isTimeout: boolean = false) {
+//   let result = [];
+//   try {
+//     for (var item of CURRENCIES) {
+//       const trs = yield call(metaMaskController.loadTransactions, payload, 
+//         item.id == ethId ? item.ethPipeContract : item.ethTokenContract, item.id);
+//       result = result.concat(trs);
+//     }
+//   } catch (e) {
+//     console.log(e);
+//   }
+//   yield put(actions.setTransactions(result));
+//   store.dispatch(mainActions.loadAppParams.request(null));
 
-  if (isTimeout) {
-    yield delay(5000);
-    yield call(handleTransactions, payload, true);
-  }
-}
+//   if (isTimeout) {
+//     yield delay(5000);
+//     yield call(handleTransactions, payload, true);
+//   }
+// }
 
 function* sharedSaga() {
-  const remoteChannel = yield call(remoteEventChannel);
+  // const remoteChannel = yield call(remoteEventChannel);
 
-  while (true) {
-    try {
-      const payload: any = yield take(remoteChannel);
-      if (localStorage.getItem('locked')) {
-        store.dispatch(setIsLocked(true));
-      }
+  // while (true) {
+  //   try {
+  //     const payload: any = yield take(remoteChannel);
+  //     if (localStorage.getItem('locked')) {
+  //       store.dispatch(setIsLocked(true));
+  //     }
 
-      switch (payload.event) {
-        case 'account_loaded':
-          if (payload.data.length === 0) {
-            store.dispatch(setIsLoggedIn(false));
-            const wasReloaded = localStorage.getItem('wasReloaded');
-            if (wasReloaded) {
-              metaMaskController.connect();
-              localStorage.removeItem('wasReloaded');
-            }
-            yield put(navigate(ROUTES.MAIN.CONNECT));
-          } else {
-            store.dispatch(setIsCorrectNetwork(window.ethereum.networkVersion == CHAIN_ID));
-            initApp(payload.data[0]);
-            yield fork(handleTransactions, payload.data[0], true);
-          }
+  //     switch (payload.event) {
+  //       case 'account_loaded':
+  //         if (payload.data.length === 0) {
+  //           store.dispatch(setIsLoggedIn(false));
+  //           const wasReloaded = localStorage.getItem('wasReloaded');
+  //           if (wasReloaded) {
+  //             metaMaskController.connect();
+  //             localStorage.removeItem('wasReloaded');
+  //           }
+  //           // yield put(navigate(ROUTES.MAIN.CONNECT));
+  //         } else {
+  //           store.dispatch(setIsCorrectNetwork(window.ethereum.networkVersion == CHAIN_ID));
+  //           initApp(payload.data[0]);
+  //           yield fork(handleTransactions, payload.data[0], true);
+  //         }
 
-          break;
+  //         break;
         
-        case 'account_changed':
-          if (payload.data.length === 0) {
-            store.dispatch(setIsLoggedIn(false));
-            yield put(navigate(ROUTES.MAIN.CONNECT));
-          } else {
-            initApp(payload.data[0]);
-            yield fork(handleTransactions, payload.data[0]);
-            yield put(navigate(ROUTES.MAIN.BASE));
-          }
+  //       case 'account_changed':
+  //         if (payload.data.length === 0) {
+  //           store.dispatch(setIsLoggedIn(false));
+  //           yield put(navigate(ROUTES.MAIN.CONNECT));
+  //         } else {
+  //           initApp(payload.data[0]);
+  //           yield fork(handleTransactions, payload.data[0]);
+  //           yield put(navigate(ROUTES.MAIN.BASE));
+  //         }
 
-          break;
-        case 'metamask_not_installed':
-          store.dispatch(setIsLoggedIn(false));
-          store.dispatch(setPopupState({type: 'install', state: true}));
-          yield put(navigate(ROUTES.MAIN.CONNECT));
+  //         break;
+  //       case 'metamask_not_installed':
+  //         store.dispatch(setIsLoggedIn(false));
+  //         store.dispatch(setPopupState({type: 'install', state: true}));
+  //         yield put(navigate(ROUTES.MAIN.CONNECT));
 
-          break;
+  //         break;
 
-        case 'chain_changed':
-          window.location.reload();
-          break;
-        default:
-          break;
-      }
-    } catch (err) {
-      remoteChannel.close();
-    }
-  }
+  //       case 'chain_changed':
+  //         window.location.reload();
+  //         break;
+  //       default:
+  //         break;
+  //     }
+  //   } catch (err) {
+  //     remoteChannel.close();
+  //   }
+  // }
 }
+
+// function* sharedSaga() {
+//   yield takeLatest(actions.udpateIsRecoveryState.request, recoveryStateSaga);
+//   yield takeLatest(actions.udpateBorrowState.request, borrowStateSaga);
+//   yield takeLatest(actions.updateStabilityPoolState.request, stabilityPoolSaga);
+//   yield takeLatest(actions.loadRates.request, loadRatesSaga);
+//   yield takeLatest(actions.updateVesselState.request, updateVesselSaga);
+// }
 
 export default sharedSaga;

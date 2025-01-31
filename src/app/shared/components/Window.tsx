@@ -1,86 +1,47 @@
-import React, { useRef } from 'react';
-import { styled } from '@linaria/react';
-import { useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { selectPopupsState } from '@app/containers/Main/store/selectors';
-import { selectSystemState } from '@app/shared/store/selectors';
-import { Button, AccountPopup } from './';
-import { setPopupState } from '@app/containers/Main/store/actions';
-import { ActiveAccount } from '@app/shared/components';
+import React, { ReactNode, useRef } from 'react';
+import { useAccount } from 'wagmi';
+import { useDispatch } from 'react-redux';
+import { AccountButtonWithModal } from '@app/shared/components';
+import { Box, Flex, Text, VStack } from '@chakra-ui/react';
 
 interface WindowProps {
   onPrevious?: React.MouseEventHandler | undefined;
   state?: 'content';
+  children?: ReactNode;
 }
-
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background-image: url(assets/bg.png);
-  background-attachment: fixed;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  min-height: 100%;
-  padding-bottom: 50px;
-
-  > .wrong-network {
-    height: 40px;
-    background-color: #F0CF0A;
-    width: 100%;
-    font-size: 30px;
-    font-weight: 900;
-    text-align: center;
-    color: #000000;
-  }
-`;
-
-const Title = styled.h1`
-  font-size: 56px;
-  font-weight: 900;
-  margin-bottom: 50px;
-  margin-top: 20px;
-`;
 
 const Window: React.FC<WindowProps> = ({
   children,
-  onPrevious,
   state
 }) => {
-  const navigate = useNavigate();
-  const rootRef = useRef();
-  const dispatch = useDispatch();
-
-  const popupsState = useSelector(selectPopupsState());
-  const systemState = useSelector(selectSystemState());
-
-  const setPopupVisible = () => {
-    dispatch(setPopupState({type: 'account', state: true}));
-  };
+  const { chain } = useAccount();
+  const rootRef = useRef<HTMLDivElement>(null);
   
   return (
-    <Container ref={rootRef}>
-      { systemState.isCorrectNetwork === false && 
-        <div className='wrong-network'> Wrong network! Change network to Mainnet.</div>}
-      { state !== "content" ?
-      <>  
-        {
-          systemState.account ? 
-          <ActiveAccount text={systemState.account} onClick={()=>{setPopupVisible()}}></ActiveAccount> :
-          <></>
-        }
-        <Title>WBEAM (Ethereum) ={'>'} BEAM Bridge</Title>
-        { children }
-        <AccountPopup visible={popupsState.account} onCancel={()=>{
-          dispatch(setPopupState({type: 'account', state: false}));
-        }}/>
-      </> : 
-      <>
+    <Flex ref={rootRef}
+      direction={"column"}
+      alignItems={"center"}
+      bgImage={"url(assets/bg.png)"}
+      bgAttachment={"fixed"}
+      bgPosition={"center"}
+      bgRepeat={"no-repeat"}
+      bgSize={"cover"}
+      minH={"100%"}
+      paddingBottom={"50px"}
+    >
+      { state !== "content" && (
+        <VStack width={"100%"} justifyContent={"end"} padding={"50px 80px"}>
+          <Box ml={"auto"}>
+            <AccountButtonWithModal />
+          </Box>
+
+          <Text textAlign={"center"} fontSize={"46px"} fontWeight={"900"} margin={"20px 0 50px"}>
+            WBEAM ({chain?.name}) ={'>'} BEAM Bridge
+          </Text>
+        </VStack>       
+      )}
       { children }
-      </>
-      }
-    </Container>
+    </Flex>
   );
 };
 

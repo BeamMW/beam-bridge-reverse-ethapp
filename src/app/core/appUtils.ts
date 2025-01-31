@@ -147,3 +147,35 @@ export async function calcSomeFee (rate_id: string) {
   const RELAY_SAFETY_COEFF = 2;//1.1;
   return RELAY_SAFETY_COEFF * relayCosts / parseFloat(currRate[rate_id]['usd']);
 }
+
+export const floatFormat = (balance: string) => {
+  if (balance.includes('.')) {
+    let [integerPart, decimalPart] = balance.split('.');
+
+    if (decimalPart.length > 4) {
+      let truncatedDecimals = decimalPart.substring(0, 4);
+      let remainingDecimals = decimalPart.substring(4);
+
+      if (truncatedDecimals[3] === '0') {
+        let i = 0;
+
+        while (i < remainingDecimals.length && remainingDecimals[i] === '0') {
+          truncatedDecimals += '0';
+          i++;
+        }
+
+        if (i < remainingDecimals.length) {
+          truncatedDecimals += remainingDecimals[i];
+        }
+
+        return integerPart + '.' + truncatedDecimals;
+      } else {
+        return integerPart + '.' + truncatedDecimals;
+      }
+    }
+
+    return integerPart + '.' + decimalPart;
+  } else {
+    return balance;
+  }
+}

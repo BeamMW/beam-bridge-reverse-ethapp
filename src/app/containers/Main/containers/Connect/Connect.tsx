@@ -1,30 +1,14 @@
-import React from 'react';
-import { styled } from '@linaria/react';
-import { useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { Button, Window, InstallPopup } from '@app/shared/components';
-import { IconMetamask } from '@app/shared/icons';
-import { selectPopupsState } from '../../store/selectors';
-import { setIsLocked, setPopupState } from '../../store/actions';
-import { ROUTES } from '@app/shared/constants';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { Window, ConnectButtonWithModal } from "@app/shared/components";
+import { IconMetamask } from "@app/shared/icons";
+import { ROUTES } from "@app/shared/constants";
+import { Text, VStack } from "@chakra-ui/react";
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-`;
 
-const Title = styled.h1`
-  margin-top: 240px
-  font-size: 56px;
-  font-weight: 900;
-`;
-
-const Subtitle = styled.h2`
-  margin-top: 30px;
-  font-size: 24px;
-  text-align: center;
-`;
+import { selectPopupsState } from "../../store/selectors";
+import { setIsLocked } from "../../store/actions";
 
 const Connect: React.FC = () => {
   const navigate = useNavigate();
@@ -32,43 +16,35 @@ const Connect: React.FC = () => {
 
   const popupsState = useSelector(selectPopupsState());
 
-  const connectToMetamask = () => {
-    if (window.ethereum) {
-        if (localStorage.getItem('locked')) {
-          localStorage.removeItem('locked');
-          dispatch(setIsLocked(false));
-          navigate(ROUTES.MAIN.BASE);
-        }
-        window.ethereum
-            .request({ method: 'eth_requestAccounts' })
-            .then(accounts => console.log('success!'))
-    } else {
-        localStorage.setItem('wasReloaded', '1');
-        window.location.reload();
-    }
-  }
+  // const connectToMetamask = () => {
+  //   if (window.ethereum) {
+  //       if (localStorage.getItem("locked")) {
+  //         localStorage.removeItem("locked");
+  //         dispatch(setIsLocked(false));
+  //         navigate(ROUTES.MAIN.BASE);
+  //       }
+  //       window.ethereum
+  //           .request({ method: "eth_requestAccounts" })
+  //           .then(() => console.log("success!"))
+  //   } else {
+  //       localStorage.setItem("wasReloaded", "1");
+  //       window.location.reload();
+  //   }
+  // }
 
   return (
-    <>
-      <Window state="content">
-        <Container>
-          <Title>WBEAM (Ethereum) ={'>'} BEAM Bridge</Title>
-          <Subtitle>
-            Transfer ETH and BEAM.<br/>
-            More tokens coming soon!
-          </Subtitle>
-          <Button icon={IconMetamask}
-            pallete="white"
-            variant="connect"
-            onClick={connectToMetamask}>
-              CONNECT WALLET
-            </Button>
-        </Container>
-        <InstallPopup visible={popupsState.install} onCancel={()=>{
-          dispatch(setPopupState({type: 'install', state: false}));
-        }}/>
-      </Window>
-    </>
+    <Window state="content">
+      <VStack height={"100vh"} justifyContent={"center"} alignItems={"center"}>
+        <Text fontSize={"56px"} fontWeight={"900"} textAlign={"center"}>
+          WBEAM (Ethereum) ={">"} BEAM Bridge
+        </Text>
+        <Text textAlign={"center"} fontSize={"24px"} fontWeight={"bold"} mt={"30px"}>
+          Transfer ETH and BEAM.<br/>
+          More tokens coming soon!
+        </Text>
+        <ConnectButtonWithModal></ConnectButtonWithModal>
+      </VStack>
+    </Window>
   );
 };
 

@@ -56,16 +56,7 @@ const StyledApproveButton = styled.span`
   margin-left: auto;
 `;
 
-const ICONS = {
-  beam: () => (<IconBeam/>),
-  usdt: () => (<IconUsdt/>),
-  wbtc: () => (<IconWbtc/>),
-  dai: () => (<IconDai/>),
-  eth: () => (<IconEth/>),
-};
-
 const Card: React.FC<CardProps> = ({
-  children,
   balanceValue,
   rate_id,
   curr_id,
