@@ -73,10 +73,10 @@ const AccountButtonWithModal: React.FC = () => {
                 BRIDGE ADDRESS
               </Text>
               <HStack >
-                <Text mr={"15px"} fontSize={"14px"}>
+                <Text fontSize={"14px"}>
                   {fullAddress}
                 </Text>
-                <IconCopyWhite onClick={handleCopyClick} cursor={"pointer"}/>
+                <IconCopyWhite onClick={handleCopyClick} cursor={"pointer"} width={"15px"} height={"15px"}/>
               </HStack>
 
               <Text fontSize={"14px"} fontWeight={"bold"} letterSpacing={"2.6px"}>

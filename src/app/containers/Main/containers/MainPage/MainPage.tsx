@@ -187,7 +187,7 @@ const MainPage: React.FC = () => {
             onClick={handleSendClick}>
               <IconSend />
               <Text ml={"10px"}>
-                WBEAM (Ethereum) ={'>'} BEAM
+                WBEAM ({activeChain?.name}) ={'>'} BEAM
               </Text>
           </Button>
           <Button
@@ -199,7 +199,7 @@ const MainPage: React.FC = () => {
             onClick={handleReceiveClick}>
               <IconReceive />
               <Text ml={"10px"}>
-                BEAM ={'>'} WBEAM (Ethereum)
+                BEAM ={'>'} WBEAM ({activeChain?.name})
               </Text>
           </Button>
         </StyledControls>
