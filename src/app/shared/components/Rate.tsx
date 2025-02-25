@@ -3,7 +3,7 @@ import { styled } from '@linaria/react';
 
 import { fromGroths, getSign, toUSD } from '@core/appUtils';
 import { useSelector } from 'react-redux';
-import { selectRate } from '@app/containers/Main/store/selectors';
+import { selectRates } from '@app/containers/Main/store/selectors';
 
 interface Props {
   value: number;
@@ -21,7 +21,7 @@ const Ratetyled = styled.div`
 const Rate: React.FC<Props> = ({
   value, income, groths, className, selectedCurrencyId
 }) => {
-  const rate = useSelector(selectRate());
+  const rate = useSelector(selectRates());
   const sign = income ? getSign(income) : '';
   const amount = groths ? fromGroths(value) : value;
   return (

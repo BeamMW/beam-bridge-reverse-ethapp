@@ -9,12 +9,10 @@ import store from '../../../index';
 
 import { actions } from '@app/shared/store/index';
 import { ROUTES, CURRENCIES, ethId } from '@app/shared/constants';
-import MetaMaskController from '@core/MetaMask';
 import MetaMaskOnboarding from '@metamask/onboarding';
 import { setIsLocked, setIsLoggedIn, setPopupState } from '@app/containers/Main/store/actions';
 import delay from '@redux-saga/delay-p';
 
-const metaMaskController = MetaMaskController.getInstance();
 
 const CHAIN_ID = '1';
 

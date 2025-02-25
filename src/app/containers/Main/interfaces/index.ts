@@ -1,2 +1,2 @@
-export * from './EpochesStateType';
+export * from './AppStateType';
 export * from './RateResponse';

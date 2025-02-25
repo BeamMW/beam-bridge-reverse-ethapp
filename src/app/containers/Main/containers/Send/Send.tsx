@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { styled } from '@linaria/react';
 import { Button, Input, Window, Rate } from '@app/shared/components';
 import { css } from '@linaria/core';
+import { estimateGas } from '@wagmi/core';
+import { config } from "@core/wagmiConfig";
+import EthERC20Pipe from '@app/eth-pipe/EthERC20Pipe.json';
 import { 
   IconBack,
   IconSend,
@@ -14,44 +17,27 @@ import {
   IconSendPink
 } from '@app/shared/icons';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '@app/shared/constants';
-import { selectSystemState } from '@app/shared/store/selectors';
-import MetaMaskController  from '@core/MetaMask';
+import { CURRENCY_IDS, NETWORKS_BY_ID, ROUTES } from '@app/shared/constants';
 import { useParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { ethId, CURRENCIES, ETH_RATE_ID } from '@app/shared/constants';
-import { selectBalance, selectIsApproveInProgress, selectRate } from '../../store/selectors';
+import { useDispatch, useSelector } from 'react-redux';
+import { CURRENCIES, ETH_RATE_ID } from '@app/shared/constants';
 import { useFormik } from 'formik';
-import { Currency } from '@app/core/types';
-import { HStack, Text } from '@chakra-ui/react';
+import { Box, Divider, HStack, Text, VStack } from '@chakra-ui/react';
+import { useTokenBalanceAndAllowance } from '@app/shared/hooks';
+import { useAccount, useSwitchChain, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
+import { Currency } from '@app/shared/interface/Common';
+import { parseNetwork, parseAddress, amountToBigInt } from "@core/appUtils";
+import { encodeFunctionData, erc20Abi, maxUint256 } from 'viem';
+import { ethers } from 'ethers';
 
-const metaMaskController = MetaMaskController.getInstance();
-const BEAM_ADDRESS_LENGTH = 66;
+import { selectGasPrices, selectIsApproveInProgress, selectRates } from '../../store/selectors';
+import { loadGasPrices } from '../../store/actions';
+import { toast } from 'react-toastify';
 
 interface SendFormData {
   send_amount: string;
   address: string;
 }
-
-const ControlStyled = styled.div`
-  width: 600px;
-  margin: 20px auto;
-  flex-direction: row;
-  display: flex;
-
-  > .back {
-    cursor: pointer;
-    display: flex;
-    flex-direction: row;
-
-    > .back-text {
-      opacity: .3;
-      font-size: 14px;
-      font-weight: bold;
-      margin-left: 15px;
-    }
-  }
-`;
 
 const FormStyled = styled.form`
   width: 600px;
@@ -85,13 +71,6 @@ const FormStyled = styled.form`
     font-style: italic;
     font-size: 14px;
     margin: 30px auto 0;
-  }
-
-  > .separator {
-    height: 1px;
-    width: 100%;
-    background-color: rgba(255, 255, 255, 0.1);
-    margin: 20px 0;
   }
 `;
 
@@ -157,51 +136,6 @@ const FeeContainer = styled.div`
   }
 `;
 
-const AvailableContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  margin-top: 30px;
-
-  > .header {
-    font-weight: 700;
-    font-size: 14px;
-    line-height: 17px;
-    letter-spacing: 3.11111px;
-    display: flex;
-
-    > .add-max {
-      margin-left: auto;
-      cursor: pointer;
-      display: flex;
-
-      > .text {
-        font-weight: 700;
-        font-size: 14px;
-        line-height: 17px;
-        color: #DA68F5;
-        margin-left: 10px;
-      }
-    }
-  }
-
-  > .balance {
-    margin-top: 10px;
-    font-weight: 400;
-    font-size: 14px;
-  }
-
-  > .rate {
-    margin-top: 5px;
-    font-size: 12px;
-    mix-blend-mode: normal;
-    opacity: 0.5;
-  }
-`;
-
-const CurrencyIconClass = css`
-  margin: 50px auto 0;
-`;
-
 const RateStyleClass = css`
   font-size: 12px;
   align-self: start;
@@ -225,37 +159,40 @@ const FeeSubtitleWarningClass = css`
   margin-top: 0 !important;
 `;
 
+const DEFAULT_RELAYER_FEE = 0.02;
+
 const Send = () => {
   const navigate = useNavigate();
   const addressInputRef = useRef<HTMLInputElement>();
   const amountInputRef = useRef<HTMLInputElement>();
-  const systemState = useSelector(selectSystemState());
-  const balance = useSelector(selectBalance());
-  const rates = useSelector(selectRate());
+  const dispatch = useDispatch();
+  const rates = useSelector(selectRates());
+  const gasPrices = useSelector(selectGasPrices());
   const isApproveInProgress = useSelector(selectIsApproveInProgress());
 
-  const [selectedCurrency, setSelectedCurrency] = useState(null);
-  const [relayerFeeVal, setRelayerFeeVal] = useState(null);
-  const [ethFeeVal, setEthFeeVal] = useState(null);
-  const [parsedAddressValue, setParsedAddressValue] = useState(null);
-  const [isAllowed, setIsAllowed] = useState(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency>();
+  const [relayerFeeVal, setRelayerFeeVal] = useState<number>(DEFAULT_RELAYER_FEE);
+  const [ethFeeVal, setEthFeeVal] = useState<number>();
+  const [parsedAddressValue, setParsedAddressValue] = useState<string>("");
+  const [selectedNetworkId, setSelectedNetworkId] = useState<string>("");
   const [isNetworkFeeAvailable, setIsNetworkFeeAvailable] = useState(false);
-  
-  let relayerFeeInterval = null;
 
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [availableBalance, setAvailableBalance] = useState({
-    value: 0,
-    rate: 0
-  })
+  const { address, chain: activeChain } = useAccount();
+  const { switchChain } = useSwitchChain();
+  const { writeContract, data: hash } = useWriteContract();
+
+  const { tokenBalance, ethBalance, allowance, isLoading, error } = useTokenBalanceAndAllowance({
+    address: address as `0x${string}`,
+    activeChainId: activeChain?.id as number,
+  });
+
+  const { data: receipt, isLoading: isTxLoading, isSuccess: isTxSuccess, isError: isTxError } = useWaitForTransactionReceipt({
+    hash,
+  });
+  
+  let relayerFeeInterval: NodeJS.Timer;
+
   const { address: addressFromParams } = useParams();
-  const ICONS = {
-    beam: () => (<IconBeam className={CurrencyIconClass}/>),
-    usdt: () => (<IconUsdtLarge className={CurrencyIconClass}/>),
-    wbtc: () => (<IconWbtcLarge className={CurrencyIconClass}/>),
-    dai: () => (<IconDaiLarge className={CurrencyIconClass}/>),
-    eth: () => (<IconEthLarge className={CurrencyIconClass}/>),
-  };
 
   const formik = useFormik<SendFormData>({
     initialValues: {
@@ -272,53 +209,60 @@ const Send = () => {
   const {
     values, setFieldValue, errors, submitForm, resetForm
   } = formik;
-
-  //balance state
-  useEffect(() => {
-    if (balance.length > 0) {
-      setIsLoaded(true);
-    } else {
-      setIsLoaded(false);
-    }
-  }, [balance]);
   
-  //address from params
   useEffect(() => {
-    if (addressFromParams && isLoaded) {
-      const parsedCurrency = parseCurrency(addressFromParams);
-      if (parsedCurrency) {
-        setSelectedCurrency(parsedCurrency);
-      }
+    if (isTxLoading) {
+      toast("Transaction is in progress");
     }
-  }, [addressFromParams, isLoaded]);
 
-  //is allowed state
-  useEffect(() => {
-    if (selectedCurrency && balance.length > 0) {
-      if (selectedCurrency.id !== ethId) {
-        const fromBalance = balance.find((item) => item.curr_id === selectedCurrency.id)
-        setIsAllowed(fromBalance.is_approved);
-      } else {
-        setIsAllowed(true);
-      }
+    if (isTxSuccess) {
+      toast("Transaction completed");
+      // resetState()
+      // navigate(ROUTES.MAIN.BASE);
     }
-  }, [selectedCurrency, balance]);
+
+    if (isTxError) {
+      toast("Transaction declined");
+    }
+  }, [isTxLoading, isTxSuccess, isTxError]);
 
   useEffect(() => {
-    if (selectedCurrency && rates) {
-      setAvailableBalance({
-        value: getBalance(selectedCurrency.id),
-        rate: rates[selectedCurrency.rate_id].usd
-      });
+    if (rates) {
+      dispatch(loadGasPrices.request());
+    }
+  }, [rates]);
+  
+  useEffect(() => {
+    if (addressFromParams) {
+      const { networkIndicator, parsedAddress } = parseAddress(addressFromParams);
+      setParsedAddressValue(parsedAddress);
+      const { networkId } = parseNetwork(networkIndicator);
+      setSelectedNetworkId(networkId);
+      setSelectedCurrency(CURRENCIES[networkId][CURRENCY_IDS.BEAM]);
+    }
+  }, [addressFromParams]);
+
+  useEffect(() => {
+    if (selectedNetworkId && Number(selectedNetworkId) !== activeChain?.id) {
+      switchChain?.({ chainId: Number(selectedNetworkId) });
+    }
+  }, [selectedNetworkId, activeChain]);
+
+  useEffect(() => {
+    if (selectedNetworkId && Object.keys(rates).length > 0 && selectedCurrency) {
       if (relayerFeeInterval) {
-        relayerFeeInterval = setInterval(() => calcRelayerFee(selectedCurrency), 5000);
+        relayerFeeInterval = setInterval(() => calcRelayerFee(rates[selectedCurrency.rate_id].usd), 5000);
       }
-      calcRelayerFee(selectedCurrency);
+      calcRelayerFee(rates[selectedCurrency.rate_id].usd);
     } else {
       clearInterval(relayerFeeInterval);
-      setRelayerFeeVal(null);
+      setRelayerFeeVal(DEFAULT_RELAYER_FEE);
     }
-  }, [selectedCurrency, rates]);
+  }, [selectedNetworkId, rates, selectedCurrency]);
+
+  const calcRelayerFee = (rate: number) => {
+    setRelayerFeeVal((rate * 0.02) / rate);
+  };
 
   const validate = async (formValues: SendFormData) => {
     const errorsValidation: any = {};
@@ -327,9 +271,9 @@ const Send = () => {
         address
     } = formValues;
 
-    let parsedCurrency = addressFromParams ? parseCurrency(addressFromParams) : null;
+    let parsedCurrency = addressFromParams ? parseAddress(addressFromParams) : null;
     if (!parsedCurrency) {
-      parsedCurrency =  parseCurrency(address);
+      parsedCurrency =  parseAddress(address);
     }
 
     const regex = new RegExp('^[A-Za-z0-9]+$');
@@ -337,13 +281,9 @@ const Send = () => {
       errorsValidation.address = `Unrecognized address`;
     }
     
-    if (parsedCurrency && relayerFeeVal && !metaMaskController.isDisabled) {
+    if (parsedCurrency && relayerFeeVal) {
       const sendAmount = Number(send_amount);
-      const fromBalance = balance.find((item) => item.curr_id === parsedCurrency.id);
-      const ethBalance = balance.find((item) => item.curr_id === ethId);
-      if (parsedCurrency.id === ethId ? 
-        (sendAmount + relayerFeeVal + ethFeeVal) > fromBalance.value : 
-        (sendAmount + relayerFeeVal) > fromBalance.value) {
+      if ((sendAmount + relayerFeeVal) > Number(tokenBalance?.formatted)) {
         errorsValidation.send_amount = `Insufficient funds to complete the transaction.`;
         setIsNetworkFeeAvailable(false);
       } else {
@@ -351,16 +291,10 @@ const Send = () => {
           setIsNetworkFeeAvailable(false);
           errorsValidation.send_amount = `Insufficient funds to pay transaction fee.`;
         } else {
-          setIsNetworkFeeAvailable((sendAmount + relayerFeeVal) <= fromBalance.value);
+          setIsNetworkFeeAvailable((sendAmount + relayerFeeVal) <= Number(tokenBalance?.formatted));
 
-          if (parsedCurrency.id === ethId) {
-            if (sendAmount < (relayerFeeVal + ethFeeVal)) {
-              errorsValidation.send_amount = `Insufficient funds to pay transaction fee.`;
-            }
-          } else {
-            if (ethBalance.value < ethFeeVal) {
-              errorsValidation.send_amount = `Insufficient funds to pay transaction fee.`;
-            }
+          if (ethFeeVal && Number(ethBalance?.formatted) < ethFeeVal) {
+            errorsValidation.send_amount = `Insufficient funds to pay transaction fee.`;
           }
         }
       }
@@ -375,83 +309,74 @@ const Send = () => {
 
   const isFormDisabled = () => {
     if (!formik.isValid) return !formik.isValid;
-    if (metaMaskController.isDisabled) return true;
     return false;
   };
 
   const resetState = () => {
-    setRelayerFeeVal(null);
-    setParsedAddressValue(null);
-    setIsAllowed(null);
-    setIsLoaded(false);
-    setSelectedCurrency(null);
-    metaMaskController.isDisabled = true;
+    setRelayerFeeVal(DEFAULT_RELAYER_FEE);
+    setParsedAddressValue("");
+    setSelectedCurrency(undefined);
   }
 
-  const getBalance = (id: number) => {
-    const balanceItem = balance.find((item) => {
-      return item.curr_id === id;
-    });
-    return balanceItem ? balanceItem.value : 0;
-  };
-
-  const parseCurrency = (value: string):Currency => {
-    const key = value.slice(-BEAM_ADDRESS_LENGTH);
-    if (key.length === BEAM_ADDRESS_LENGTH) {
-      const currName = value.slice(0, value.length - BEAM_ADDRESS_LENGTH);
-      const parsedCurrency = findCurrency(currName);
-      if (parsedCurrency) {
-        setParsedAddressValue(key);
-        return parsedCurrency;
+  const getEthFee = async (amount: number) => {
+    if (selectedCurrency) {
+      let address = addressFromParams ? parsedAddressValue : values.address as string;
+      if (address.length > 66) {
+        address = address.slice(-66)
       }
+
+      const finalAmount = amountToBigInt(amount, selectedCurrency.decimals, selectedCurrency.validator_dec);
+      const relayerFee = amountToBigInt(relayerFeeVal, selectedCurrency.decimals, selectedCurrency.validator_dec);
+
+      const functionName = 'sendFunds';
+      const data = encodeFunctionData({
+        abi: EthERC20Pipe.abi,
+        functionName,
+        args: [
+          finalAmount,
+          relayerFee,
+          address.slice(0, 2) !== '0x' ? ('0x' + address) : address,
+        ],
+      });
+
+      const gasEstimate = await estimateGas(config, {
+        to: selectedCurrency.ethPipeContract as `0x${string}`,
+        data: data,
+      });
+
+      const gasPrice = ethers.BigNumber.from(
+        gasPrices[NETWORKS_BY_ID[selectedNetworkId].relayerFeeNetworkId]
+      );
+      const gasEstimateBN = ethers.BigNumber.from(gasEstimate);
+      
+      const feeValue = ethers.utils.formatUnits(
+        gasPrice.mul(gasEstimateBN),
+        "ether"
+      );
+
+      setEthFeeVal(Number(feeValue));
     }
-
-    return null;
-  };
-
-  const findCurrency = (currencyName: string) => {
-    return CURRENCIES.find((item) => {
-      return item.name.toLowerCase() === currencyName;
-    });
-  };
-
-  const calcRelayerFee = (curr) => {
-    const feeInUsd = rates.beam.usd * 0.02;
-    const feeInEth = feeInUsd / rates[curr.rate_id].usd;
-    setRelayerFeeVal(feeInEth);
-  };
-
-  const getEthFee = async (amount) => {
-    let address = addressFromParams ? parsedAddressValue : values.address as string;
-    if (address.length > 66) {
-      address = address.slice(-66)
-    }
-    
-    const sendData = {
-      address,
-      amount,
-      fee: relayerFeeVal,
-      selectedCurrency,
-      account: systemState.account
-    };
-
-    const fee = await metaMaskController.loadEthFee(sendData);
-    setEthFeeVal(Number(fee));
   };
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async event => {
     event.preventDefault();
-    const sendData = {
-      address: parsedAddressValue,
-      amount: Number(values.send_amount),
-      fee: relayerFeeVal,
-      selectedCurrency,
-      account: systemState.account
-    };
 
-    metaMaskController.sendToken(sendData);
-    resetState()
-    navigate(ROUTES.MAIN.BASE);
+    if (selectedCurrency) {
+      const finalAmount = amountToBigInt(Number(values.send_amount), selectedCurrency.decimals, selectedCurrency.validator_dec);
+      const relayerFee = amountToBigInt(relayerFeeVal, selectedCurrency.decimals, selectedCurrency.validator_dec);
+      const beamAddress = parsedAddressValue.slice(0, 2) !== '0x' ? ('0x' + parsedAddressValue) : parsedAddressValue;
+
+      writeContract({
+        address: selectedCurrency.ethPipeContract as `0x${string}`,
+        abi: EthERC20Pipe.abi,
+        functionName: 'sendFunds',
+        args: [
+          finalAmount,
+          relayerFee,
+          beamAddress,
+        ],
+      });
+    }
   };
 
   const handleBackClick: React.MouseEventHandler = () => {
@@ -460,52 +385,48 @@ const Send = () => {
   };
 
   const handleApproveTokenClick = (id: number) => {
-    metaMaskController.approveToken(id);
+    toast('Approve is in progress');
+    writeContract({
+      address: selectedCurrency?.ethTokenContract as `0x${string}`,
+      abi: erc20Abi,
+      functionName: 'approve',
+      args: [address as `0x${string}`, maxUint256],
+    });
   };
 
   const handleDownloadClick: React.MouseEventHandler = () => {
-    window.open('https://beam.mw/downloads', '_blank').focus();
+    window.open('https://beam.mw/downloads', '_blank');
   }
-
-  const debounce = (fn, delay) => {
-    let timerId;
-    return (...args) => {
-      clearTimeout(timerId);
-      timerId = setTimeout(() => fn(...args), delay);
-    }
-  };
 
   const handleAmountChange = (amount: string) => {
     const amountVal = Number(amount);
-    if (metaMaskController.isDisabled && amountVal > 0) {
-      metaMaskController.isDisabled = false;
-    }
-
     setFieldValue('send_amount', amount, true);
 
-    if (availableBalance.value >= (amountVal + relayerFeeVal) && amountVal > relayerFeeVal) {
-      getEthFee(amount);
+    if (Number(tokenBalance?.formatted) >= (amountVal + relayerFeeVal) && amountVal > relayerFeeVal) {
+      getEthFee(amountVal);
     } else {
-      setEthFeeVal(null);
+      setEthFeeVal(undefined);
     }
   };
 
   const handleAddressChange = (address: string) => {
     setFieldValue('address', address, true);
     setFieldValue('send_amount', '', false);
-    const parsedCurrency = parseCurrency(address);
-    setSelectedCurrency(parsedCurrency ? parsedCurrency : null);
+
+    const { networkIndicator, parsedAddress } = parseAddress(address);
+    setParsedAddressValue(parsedAddress);
+    const { networkId } = parseNetwork(networkIndicator);
+    setSelectedNetworkId(networkId);
+    setSelectedCurrency(CURRENCIES[networkId][CURRENCY_IDS.BEAM])
   }
 
   const handleAddMaxClick = () => {
-    if (metaMaskController.isDisabled) {
-      metaMaskController.isDisabled = false;
-    }
-
-    const maxValue = availableBalance.value - relayerFeeVal;
-    if (maxValue > 0) {
-      setFieldValue('send_amount', availableBalance.value - relayerFeeVal, true);
-      getEthFee(availableBalance.value - relayerFeeVal);
+    if (relayerFeeVal) {
+      const maxValue = Number(tokenBalance?.formatted) - relayerFeeVal;
+      if (maxValue > 0) {
+        setFieldValue('send_amount', maxValue, true);
+        getEthFee(maxValue);
+      }
     }
   }
 
@@ -519,32 +440,33 @@ const Send = () => {
           </Text>
         </HStack>
       </HStack>
+
       <FormStyled autoComplete="off" noValidate onSubmit={handleSubmit}>
-        <p className='title'>Ethereum to Beam</p>
-        <FormSubtitle>BEAM BRIDGE ADDRESS</FormSubtitle>
-        { isLoaded && 
-          <> { 
-            addressFromParams && parsedAddressValue
-            ? (<div className='address-from-params'>{addressFromParams}</div>)
-            : (<Input placeholder='Paste Beam bridge address here' 
-              valid={isAddressValid()}
-              variant="common"
-              label={errors.address}
-              value={values.address}
-              onChangeHandler={handleAddressChange}
-              ref={addressInputRef} 
-              name="address"/>)
-          }
-          {
-            selectedCurrency !== null &&
-            <div className='address-type'>
-              {`${selectedCurrency.name} address`}
-            </div>
-          }
-        {
-          isAllowed && selectedCurrency ? 
-          (<>
-            <FormSubtitle>AMOUNT</FormSubtitle>
+        <Text fontSize={"24px"} fontWeight={"bold"} alignSelf={"center"}>Ethereum to Beam</Text>
+        <Text fontSize={"14px"} fontWeight={"bold"} mt={"30px"} letterSpacing={"2.6px"}>BEAM BRIDGE ADDRESS</Text>
+        { addressFromParams && parsedAddressValue ? (
+          <Text wordBreak={"break-word"} fontSize={"16px"} mt={"20px"}>{addressFromParams}</Text>
+        ) : (
+          <Input
+            placeholder='Paste Beam bridge address here' 
+            valid={isAddressValid()}
+            variant="common"
+            label={errors.address}
+            value={values.address}
+            onChangeHandler={handleAddressChange}
+            ref={addressInputRef} 
+            name="address"
+          />
+        )}
+
+        {/* { selectedCurrency && (
+          <Text mt={"8px"} opacity={"0.5"} fontSize={"12px"}>
+            {`${selectedCurrency?.name} address`}
+          </Text>
+        )} */}
+        { !!allowance && selectedCurrency ? (
+          <>
+            <Text fontSize={"14px"} fontWeight={"bold"} mt={"30px"} letterSpacing={"2.6px"}>AMOUNT</Text>
             <Input 
               variant='amount'
               selectedCurrency={selectedCurrency}
@@ -552,65 +474,89 @@ const Send = () => {
               label={errors.send_amount}
               valid={isSendAmountValid()}
               value={values.send_amount}
-              ref={amountInputRef} name="amount"></Input>
-            <AvailableContainer>
-              <div className='header'>
-                <span className='title'>AVAILABLE</span>
-                <span className='add-max' onClick={handleAddMaxClick}>
-                  <IconSendPink/>
-                  <span className='text'>max</span>
-                </span>
-              </div>
-              <div className='balance'> {availableBalance.value} {selectedCurrency.name == "BEAM" ? "WBEAM" : selectedCurrency.name} </div>
-              <div className='rate'>{availableBalance.rate} USD</div>
-            </AvailableContainer>
-            <div className='separator'/>
+              ref={amountInputRef} name="amount"
+            />
+
+            <HStack mt={"30px"}>
+              <VStack gap={0} alignItems={"start"}>
+                <Text
+                  fontWeight={"bold"}
+                  fontSize={"14px"}
+                  letterSpacing={"3.1px"}
+                >
+                  AVAILABLE
+                </Text>
+                <Text mt={"10px"} fontWeight={"400"} fontSize={"14px"}>
+                  {tokenBalance?.formatted} {tokenBalance?.symbol}
+                </Text>
+                <Text mt={"5px"} fontSize={"12px"} opacity={"0.5"}>
+                  {Number(tokenBalance?.formatted) * rates?.beam?.usd} USD
+                </Text>
+              </VStack>
+              <HStack ml={"auto"} cursor={"pointer"} onClick={handleAddMaxClick}>
+                <IconSendPink width={"20px"} height={"15px"}/>
+                <Text color={"#DA68F5"} fontWeight={"bold"} fontSize={"14px"} letterSpacing={"3.1px"}>max</Text>
+              </HStack>
+            </HStack>
+            
+            <Divider borderColor={"rgba(255, 255, 255, 0.1)"} margin={"20px 0"}/>
+
             <FeeContainer>
               <div className='fee-item'>
                 <FormSubtitle className={FeeSubtitleClass}>RELAYER FEE</FormSubtitle>
                 { relayerFeeVal && <>
-                  <div className='fee-value'>{relayerFeeVal.toFixed(12).replace(/\.?0+$/,"")} {selectedCurrency.name == "BEAM" ? "WBEAM" : selectedCurrency.name}</div>
-                  <Rate value={parseFloat(relayerFeeVal)}
+                  <div className='fee-value'>
+                    {relayerFeeVal.toFixed(12).replace(/\.?0+$/,"")} {selectedCurrency.name == "BEAM" ? "WBEAM" : selectedCurrency.name}
+                  </div>
+                  <Rate value={relayerFeeVal}
                     selectedCurrencyId={selectedCurrency.rate_id}
-                    className={RateStyleClass} />
+                    className={RateStyleClass}
+                  />
                 </>}
               </div>
               <div className='fee-item'>
                 <FormSubtitle className={!isNetworkFeeAvailable ? FeeSubtitleWarningClass : FeeSubtitleClass}>
                   EXPECTED ETHEREUM NETWORK FEE
                 </FormSubtitle>
-                {isNetworkFeeAvailable && ethFeeVal && ethFeeVal > 0 && <>
-                  <div className='fee-value'>{ethFeeVal.toFixed(12).replace(/\.?0+$/,"")} ETH</div>
-                  <Rate value={parseFloat(ethFeeVal)}
-                    selectedCurrencyId={ETH_RATE_ID}
-                    className={RateStyleClass} />
-                </>}
-                {!isNetworkFeeAvailable && <div className='fee-warning'>Insufficient funds to calculate.</div>}
+                {isNetworkFeeAvailable && ethFeeVal && ethFeeVal > 0 && (
+                  <Box>
+                    <div className='fee-value'>{ethFeeVal.toFixed(12).replace(/\.?0+$/,"")} ETH</div>
+                    <Rate value={ethFeeVal}
+                      selectedCurrencyId={ETH_RATE_ID}
+                      className={RateStyleClass} />
+                  </Box>
+                )}
+                {!isNetworkFeeAvailable && (
+                  <div className='fee-warning'>Insufficient funds to calculate.</div>
+                )}
               </div>
             </FeeContainer>
-            <Button className={TransferButtonClass}
-                  type="submit"
-                  disabled={isFormDisabled()}
-                  pallete='purple' icon={IconSend}>
-                    transfer
+
+            <Button
+              className={TransferButtonClass}
+              type="submit"
+              disabled={isFormDisabled()}
+              pallete='purple' icon={IconSend}
+            >
+              transfer
             </Button>
-          </>) 
-          : (selectedCurrency !== null &&
-              <>
-                {ICONS[selectedCurrency.name.toLowerCase()]()}
-                <div className='approve-msg'>
-                  {`To send funds to BEAM please approve W${selectedCurrency.name} token first`}
-                </div>
-                <Button className={ApproveButtonClass}
-                  disabled={isApproveInProgress}
-                  onClick={()=>handleApproveTokenClick(selectedCurrency.id)}
-                  color="send"
-                  pallete='green' icon={IconCheck}>
-                    approve token
-                </Button>
-              </>)
-        } 
-        </>}
+          </>
+          ) : (selectedCurrency && (
+            <Box>
+              {/* {ICONS[selectedCurrency.name.toLowerCase()]()} */}
+              <div className='approve-msg'>
+                {`To send funds to BEAM please approve W${selectedCurrency?.name} token first`}
+              </div>
+              <Button className={ApproveButtonClass}
+                disabled={isApproveInProgress}
+                onClick={()=>handleApproveTokenClick(selectedCurrency?.id)}
+                color="send"
+                pallete='green' icon={IconCheck}>
+                  approve token
+              </Button>
+            </Box>
+          ))
+        }
       </FormStyled>
       { 
         !selectedCurrency && <InfoContainer>

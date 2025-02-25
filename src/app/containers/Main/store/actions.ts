@@ -1,4 +1,5 @@
 import { createAsyncAction, createAction } from 'typesafe-actions';
+import { GasPrices } from '../interfaces';
 
 export const setIsLoggedIn = createAction('@@MAIN/SET_IS_LOGGED_IN')<boolean>();
 export const setIsLocked = createAction('@@MAIN/SET_IS_LOCKED')<boolean>();
@@ -13,10 +14,16 @@ export const loadAppParams = createAsyncAction(
     '@@MAIN/LOAD_PARAMS_FAILURE',
 )<any, any, any>();
 
-export const loadRate = createAsyncAction(
+export const loadRates = createAsyncAction(
     '@@MAIN/GET_RATE',
     '@@MAIN/GET_RATE_SUCCESS',
     '@@MAIN/GET_RATE_FAILURE',
   )<void, any, any>();
+
+  export const loadGasPrices = createAsyncAction(
+    '@@MAIN/GET_GAS_PRICES',
+    '@@MAIN/GET_GAS_PRICES_SUCCESS',
+    '@@MAIN/GET_GAS_PRICES_FAILURE',
+  )<void, GasPrices, any>();
 
 

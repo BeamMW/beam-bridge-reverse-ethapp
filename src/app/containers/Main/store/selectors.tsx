@@ -6,7 +6,8 @@ export const selectBalance = () => createSelector(selectMain, (state) => state.b
 export const selectIsLoggedIn = () => createSelector(selectMain, (state) => state.isLoggedIn);
 export const selectIsLocked = () => createSelector(selectMain, (state) => state.isLocked);
 export const selectAppParams = () => createSelector(selectMain, (state) => state.appParams);
-export const selectRate = () => createSelector(selectMain, (state) => state.rate);
+export const selectRates = () => createSelector(selectMain, (state) => state.rates);
+export const selectGasPrices = () => createSelector(selectMain, (state) => state.gasPrices);
 export const selectPopupsState = () => createSelector(selectMain, (state) => state.popupsState);
 export const selectIsTrInProgress = () => createSelector(selectMain, (state) => state.isTrInProgress);
 export const selectIsApproveInProgress = () => createSelector(selectMain, (state) => state.isApproveInProgress);

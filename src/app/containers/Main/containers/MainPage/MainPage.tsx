@@ -4,11 +4,11 @@ import { css } from '@linaria/core';
 
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Window, Table, BalanceCard, TokenCard } from '@app/shared/components';
-import { selectBalance, selectIsTrInProgress } from '../../store/selectors';
+import { Window, TokenCard } from '@app/shared/components';
+import { selectIsTrInProgress } from '../../store/selectors';
 import { IconSend, IconReceive, IconEth, IconBeam } from '@app/shared/icons';
 import { CURRENCIES, ROUTES } from '@app/shared/constants';
-import { selectSystemState, selectTransactions } from '@app/shared/store/selectors';
+import { selectTransactions } from '@app/shared/store/selectors';
 import { IconDeposit, IconConfirm } from '@app/shared/icons';
 import { formatActiveAddressString } from '@core/appUtils';
 import { Button, Text } from '@chakra-ui/react';
@@ -85,10 +85,9 @@ const HashLink = styled.a`
 const MainPage: React.FC = () => {
   const navigate = useNavigate();
   const bridgeTransactions = useSelector(selectTransactions());
-  const systemState = useSelector(selectSystemState());
   const isTrInProgress = useSelector(selectIsTrInProgress());
   const [tableData, setTableData] = useState([]);
-  const { address, chain: activeChain, connector } = useAccount();
+  const { address, chain: activeChain } = useAccount();
 
   const { tokenBalance, ethBalance, allowance } = useTokenBalanceAndAllowance({
     address: address as `0x${string}`,
@@ -211,7 +210,8 @@ const MainPage: React.FC = () => {
             isToken={false}
             title={"eth"}
             icon={IconEth}
-            balance={ethBalance}
+            balance={ethBalance?.value}
+            decimals={ethBalance?.decimals}
           />
 
           <TokenCard 
@@ -219,7 +219,8 @@ const MainPage: React.FC = () => {
             isToken={true}
             title={"beam"}
             icon={IconBeam}
-            balance={tokenBalance}
+            balance={tokenBalance?.value}
+            decimals={tokenBalance?.decimals}
           />
         </Content>
         {/* <StyledTable>

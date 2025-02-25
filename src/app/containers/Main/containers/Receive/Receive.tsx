@@ -2,19 +2,19 @@ import React from 'react';
 import { Button, Window } from '@app/shared/components';
 import { ROUTES } from '@app/shared/constants';
 import { IconCopyBlue, IconBack } from '@app/shared/icons';
-import { useSelector } from 'react-redux';
-import { selectSystemState } from '@app/shared/store/selectors';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAccount } from 'wagmi';
 import { Box, Flex, HStack, Text, VStack } from '@chakra-ui/react';
+import { useAddress } from '@app/shared/hooks';
 
 const Receive = () => {
   const navigate = useNavigate();
-  const { address } = useAccount();
+  const { chain: activeChain } = useAccount();
+  const { fullAddress } = useAddress();
   
   const handleCopyClick: React.MouseEventHandler = () => {
-    navigator.clipboard.writeText(address as `0x${string}`);
+    navigator.clipboard.writeText(fullAddress as `0x${string}`);
     toast('Address copied to clipboard');
     navigate(ROUTES.MAIN.BASE);
   };
@@ -45,10 +45,10 @@ const Receive = () => {
         backgroundImage={"linear-gradient(to bottom, rgba(11, 204, 247, 0.5), rgba(11, 204, 247, 0)), linear-gradient(to bottom, #0d4d76, #0d4d76)"}
       >
         <Text fontSize={"24px"} fontWeight={"bold"} alignSelf={"center"}>
-          BEAM ={'>'} WBEAM (Ethereum)
+          BEAM ={'>'} WBEAM ({activeChain?.name})
         </Text>
-        <Text margin={"50px auto 0"} opacity={".7"} fontStyle={"italic"}>Your Ethereum Bridge address:</Text>
-        <Text margin={"20px auto 0"}>{address}</Text>
+        <Text margin={"50px auto 0"} opacity={".7"} fontStyle={"italic"}>Your {activeChain?.name} Bridge address:</Text>
+        <Text margin={"20px auto 0"}>{fullAddress}</Text>
         <Flex justifyContent={"center"} mt={"50px"}>
           <Button onClick={handleCopyClick}
             pallete='blue'
@@ -69,7 +69,7 @@ const Receive = () => {
         bgColor={"rgba(13, 77, 118, .95)"}
       >
         <Text opacity={".7"} mb={"20px"}>
-          In order to transfer from Beam to Ethereum network, do the following:
+          In order to transfer from Beam to {activeChain?.name} network, do the following:
         </Text>
         <ul color={"rgba(255, 255, 255, .7)"}>
           <HStack>
@@ -87,8 +87,7 @@ const Receive = () => {
           <Text>2.	Launch Bridges DApp from DApp store</Text>
           <HStack>
             <Text>3.	Select</Text>
-            <Text fontWeight={"bold"}>Beam to Ethereum</Text> 
-            <Text>and choose currency</Text>
+            <Text fontWeight={"bold"}>Beam to Ethereum</Text>
           </HStack>
           <Text>4.	Paste this address to Ethereum Bridge Address field</Text>
         </ul>

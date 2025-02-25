@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 
 import { actions as sharedActions, selectors as sharedSelectors } from "@app/shared/store";
+import { actions as mainActions } from "@app/containers/Main/store";
 import "react-toastify/dist/ReactToastify.css";
 
 import { useNavigate, useRoutes, Navigate } from "react-router-dom";
@@ -56,7 +57,7 @@ const App = () => {
   const content = useRoutes(routes(isConnected));
 
   useEffect(() => {
-    dispatch(sharedActions.setIsAppConnected(isConnected));
+    dispatch(mainActions.loadRates.request());
   }, [isConnected]);
 
   useEffect(() => {

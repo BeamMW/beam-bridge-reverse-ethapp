@@ -19,9 +19,7 @@ import {
 import { useAccount, useDisconnect, useSwitchChain } from 'wagmi';
 import { IconBeam, IconCopyWhite, IconEth, IconLogout } from '../icons';
 import { toast } from 'react-toastify';
-import { useSelector } from 'react-redux';
-import { selectBalance } from '@app/containers/Main/store/selectors';
-import { useTokenBalanceAndAllowance } from '../hooks';
+import { useAddress, useTokenBalanceAndAllowance } from '../hooks';
 import TokenCard from './TokenCard';
 
 const AccountButtonWithModal: React.FC = () => {
@@ -29,28 +27,37 @@ const AccountButtonWithModal: React.FC = () => {
   const { chains, switchChain } = useSwitchChain();
   const { address, chain: activeChain, connector } = useAccount();
   const { disconnect } = useDisconnect();
+  const { fullAddress } = useAddress();
 
-  const [ activeAddress, setActiveAddress ] = useState<string>("");
+  const [ formattedAddress, setFormattedAddress ] = useState<string>("");
   const [selectedNetwork, setSelectedNetwork] = useState(activeChain?.id);
 
-  const { tokenBalance, ethBalance, allowance, isLoading, error } = useTokenBalanceAndAllowance({
+  const { allowance } = useTokenBalanceAndAllowance({
     address: address as `0x${string}`,
     activeChainId: activeChain?.id as number,
   });
 
   useEffect(() => {
-    setActiveAddress(formatActiveAddressString(address));
-  }, [address]);
+    if (fullAddress) {
+      setFormattedAddress(formatActiveAddressString(fullAddress));
+    }
+  }, [fullAddress]);
 
   const handleCopyClick = () => {
-    navigator.clipboard.writeText(address || "");
+    navigator.clipboard.writeText(fullAddress || "");
     toast('Address copied to clipboard');
   };
   
   return (
     <>
-      <Button onClick={onOpen} borderRadius={"22px"} border={"solid 1px #fff"} bgColor={"rgba(255, 255, 255, 0.1)"} color={"#fff"}>
-        { activeAddress }
+      <Button
+        onClick={onOpen}
+        borderRadius={"22px"}
+        border={"solid 1px #fff"}
+        bgColor={"rgba(255, 255, 255, 0.1)"}
+        color={"#fff"}
+      >
+        { formattedAddress }
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose}>
@@ -67,7 +74,7 @@ const AccountButtonWithModal: React.FC = () => {
               </Text>
               <HStack >
                 <Text mr={"15px"} fontSize={"14px"}>
-                  {address}
+                  {fullAddress}
                 </Text>
                 <IconCopyWhite onClick={handleCopyClick} cursor={"pointer"}/>
               </HStack>

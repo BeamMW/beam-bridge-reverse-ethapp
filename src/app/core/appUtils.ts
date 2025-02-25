@@ -1,6 +1,9 @@
-import { GROTHS_IN_BEAM } from '@app/shared/constants';
+import { GasPriceItem } from '@app/containers/Main/interfaces';
+import { GROTHS_IN_BEAM, NETWORK_INDICATOR, BEAM_ADDRESS_LENGTH } from '@app/shared/constants';
 
 const API_URL = 'https://api.coingecko.com/api/v3/simple/price';
+const SAFE_FACTOR = 1.2;
+const GWEI_IN_ETH = Math.pow(10, 9);
 
 export const copyToClipboard = (value: string) => {
   let textField = document.createElement('textarea');
@@ -75,7 +78,7 @@ export function getSign(positive: boolean): string {
   return positive ? '+ ' : '- ';
 }
 
-export function Base64DecodeUrl(str){
+export function Base64DecodeUrl(str: string){
   if (str.length % 4 != 0)
     str += ('===').slice(0, 4 - (str.length % 4));
   return str.replace(/-/g, '+').replace(/_/g, '/');
@@ -91,16 +94,16 @@ export function getProposalId (id: number) {
   } 
 }
 
-export function Base64EncodeUrl(str){
+export function Base64EncodeUrl(str: string){
   return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/\=+$/, '');
 }
 
-export function openInNewTab (url) {
+export function openInNewTab (url: string) {
   const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
   if (newWindow) newWindow.opener = null
 }
 
-export function numFormatter(num) {
+export function numFormatter(num: number) {
   if (num > 999 && num < 1000000) {
       return parseFloat((num / 1000).toFixed(2)) + 'K';  
   } else if (num >= 1000000) {
@@ -178,4 +181,47 @@ export const floatFormat = (balance: string) => {
   } else {
     return balance;
   }
+};
+
+export const parseNetwork = (indicatorValue: string): {
+  networkId: string,
+} => {
+  let parsedNetworkId = "";
+  Object.entries(NETWORK_INDICATOR).map(([networkId, indicator]) => {
+    if (indicator === indicatorValue) {
+      parsedNetworkId = networkId;
+    }
+  });
+
+  return {
+    networkId: parsedNetworkId,
+  };
+};
+
+export const parseAddress = (value: string): {
+  parsedAddress: string,
+  networkIndicator: string,
+} => {
+  const address = value.slice(-BEAM_ADDRESS_LENGTH);
+  if (address.length === BEAM_ADDRESS_LENGTH) {
+    const networkIndicator = value.slice(0, value.length - BEAM_ADDRESS_LENGTH);
+
+    if (networkIndicator) {
+      return {
+        parsedAddress: address,
+        networkIndicator,
+      };
+    }
+  }
+
+  return {
+    parsedAddress: "",
+    networkIndicator: "",
+  };
+};
+
+export const amountToBigInt = (amount: number, decimals: number, validDecimals: number) : bigint => {
+  let result = BigInt(Math.round(amount * Math.pow(10, validDecimals)));
+
+  return result * BigInt(Math.pow(10, decimals - validDecimals));
 }

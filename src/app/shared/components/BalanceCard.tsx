@@ -1,13 +1,11 @@
 import React from 'react';
 import { styled } from '@linaria/react';
-import { selectIsApproveInProgress, selectRate } from '@app/containers/Main/store/selectors';
+import { selectIsApproveInProgress, selectRates } from '@app/containers/Main/store/selectors';
 import { Button } from '.';
 import { IconUsdt, IconWbtc, IconDai, IconEth, IconBeam } from '@app/shared/icons';
-import MetaMaskController from '@core/MetaMask';
 import { useSelector } from 'react-redux';
 import { selectSystemState } from '../store/selectors';
 
-const metaMaskController = MetaMaskController.getInstance();
 
 interface CardProps {
   balanceValue?: number,
@@ -65,13 +63,13 @@ const Card: React.FC<CardProps> = ({
   icon,
   ...rest
 }) => {
-  const rates = useSelector(selectRate());
+  const rates = useSelector(selectRates());
   const systemState = useSelector(selectSystemState());
   const currency = type.toUpperCase();
   const isApproveInProgress = useSelector(selectIsApproveInProgress())
 
   const approveTokenClicked = (id: number) => {
-    metaMaskController.approveToken(id);
+    // metaMaskController.approveToken(id);
   }
 
   return (

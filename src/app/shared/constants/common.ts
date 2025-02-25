@@ -16,6 +16,17 @@ export const CURRENCY_IDS = {
   ETH: "eth",
 };
 
+export const BEAM_ADDRESS_LENGTH = 66;
+
+export const NETWORK_INDICATOR: {
+  [network_id: string]: string 
+} = {
+  [`${mainnet.id}`]: "eth",
+  [`${sepolia.id}`]: "sep",
+  [`${arbitrumSepolia.id}`]: "arbsep",
+  [`${arbitrum.id}`]: "arb",
+}
+
 export const CURRENCIES: CurrenciesByNetworkType = {
   [`${mainnet.id}`]: {
     [CURRENCY_IDS.BEAM]: {
@@ -97,4 +108,33 @@ export const CURRENCIES: CurrenciesByNetworkType = {
       ethPipeContract: "0xF0860856D305803bF2adbEF064CC38bE94A9d006",
     },
   },
+};
+
+export const NETWORKS_BY_ID: {
+  [id: string]: {
+    name: string,
+    indicator: string,
+    relayerFeeNetworkId: string,
+  },
+} = {
+  "1": {
+    name: "Ethereum",
+    indicator: "eth",
+    relayerFeeNetworkId: "ethereum"
+  },
+  "11155111": {
+    name: "Sepolia",
+    indicator: "sep",
+    relayerFeeNetworkId: "ethereum-sepolia"
+  },
+  "421614": {
+    name: "Arbitrum Sepolia",
+    indicator: "arbsep",
+    relayerFeeNetworkId: "arbitrum-sepolia"
+  },
+  "42161": {
+    name: "Arbitrum",
+    indicator: "arb",
+    relayerFeeNetworkId: "arbitrum",
+  }, 
 };

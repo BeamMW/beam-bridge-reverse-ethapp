@@ -1,17 +1,23 @@
 import { useBalance, useReadContract } from 'wagmi';
 import { erc20Abi } from 'viem';
 import { CURRENCIES, CURRENCY_IDS } from '../constants';
-import { useEffect, useState } from 'react';
 
 interface UseTokenBalanceAndAllowanceProps {
   address: `0x${string}`;
   activeChainId: number;
 }
 
+interface BalanceItem {
+  decimals: number;
+  formatted: string;
+  symbol: string;
+  value: bigint;
+}
+
 interface UseTokenBalanceAndAllowanceResult {
-  tokenBalance: bigint | undefined;
+  tokenBalance: BalanceItem | undefined;
   allowance: bigint | undefined;
-  ethBalance: bigint | undefined;
+  ethBalance: BalanceItem | undefined;
   isLoading: boolean;
   error: Error | null;
 }
@@ -59,8 +65,8 @@ export const useTokenBalanceAndAllowance = ({
   const error = balanceError || allowanceError;
 
   return {
-    tokenBalance: tokenBalance?.value,
-    ethBalance: ethBalance?.value,
+    tokenBalance: tokenBalance,
+    ethBalance: ethBalance,
     allowance: allowance as bigint | undefined,
     isLoading,
     error,

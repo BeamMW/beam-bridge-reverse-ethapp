@@ -4,6 +4,7 @@ import { css } from '@linaria/core';
 import { IconWbtc, IconEth, IconDai, IconUsdt, IconBeam } from '@app/shared/icons';
 import { Currency } from '@app/core/types';
 import { Rate } from '.';
+import { HStack, Text } from '@chakra-ui/react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
@@ -16,10 +17,6 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const AMOUNT_MAX = 253999999.9999999;
-
-interface DropdownProps {
-  isVisible: boolean
-}
 
 const NumberInputClass = css`
   height: 59px;
@@ -69,36 +66,11 @@ const InputStyled = styled.input<InputProps>`
   }
 `;
 
-const StyledCurrency = styled.div`
-  margin-left: auto;
-  display: flex;
-  flex-direction: row;
-`;
-
-const CurrencyTitle = styled.span`
-  margin-left: 10px;
-  cursor: pointer;
-  background-color: transparent;
-  border: none;
-  opacity: 0.5;
-  font-size: 20px;
-  align-items: center;
-`;
-
 const rateStyle = css`
   font-size: 12px;
   align-self: start;
   margin-left: 15px;
 `;
-
-// const ErrorStyled = styled.div`
-//   position: absolute;
-//   top: 33px;
-//   left: 0;
-//   line-height: 26px;
-//   font-size: 13px;
-//   color: var(--color-failed);
-// `;
 
 const LabelStyled = styled.div<InputProps>`
   text-align: start;
@@ -125,17 +97,17 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       onChangeHandler(raw);
     };
 
-    const getCurrIcon = (curr) => {
-      const ICONS = {
-        beam: () => (<IconBeam/>),
-        usdt: () => (<IconUsdt/>),
-        wbtc: () => (<IconWbtc/>),
-        dai: () => (<IconDai/>),
-        eth: () => (<IconEth/>),
-      };
+    // const getCurrIcon = (curr) => {
+    //   const ICONS = {
+    //     beam: () => (<IconBeam/>),
+    //     usdt: () => (<IconUsdt/>),
+    //     wbtc: () => (<IconWbtc/>),
+    //     dai: () => (<IconDai/>),
+    //     eth: () => (<IconEth/>),
+    //   };
 
-      return ICONS[curr.name.toLowerCase()]()
-    }
+    //   return ICONS[curr.name.toLowerCase()]()
+    // }
 
     return (
       <>
@@ -146,18 +118,16 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             spellCheck={false}
             value={value}
             valid={valid}
-            error={error} {...rest} />
-          {
-            (variant === 'amount' 
-              ? (
-              <StyledCurrency>
-                { getCurrIcon(selectedCurrency) }
-                <CurrencyTitle>
-                  {selectedCurrency !== null ? selectedCurrency.name : ''}
-                </CurrencyTitle>
-              </StyledCurrency>
-              ) : <></>)
-          }
+            error={error} {...rest}
+          />
+          { variant === 'amount' && (
+              <HStack alignItems={"center"} gap={"10px"}>
+                <IconBeam width={"20px"} height={"20px"} />
+                <Text opacity={"0.5"} fontSize={"20px"}>
+                  { selectedCurrency?.name}
+                </Text>
+              </HStack>
+          )}
         </ContainerStyled>
         {label && <LabelStyled valid={valid}>{!valid ? label : ''}</LabelStyled>}
         {!error && selectedCurrency && <Rate value={parseFloat(value)} selectedCurrencyId={selectedCurrency.rate_id} className={rateStyle} />}

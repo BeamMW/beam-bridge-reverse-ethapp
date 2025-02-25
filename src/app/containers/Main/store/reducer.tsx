@@ -17,10 +17,8 @@ const initialState: AppStateType = {
     account: false,
     install: false
   },
-  rate: null,
-  isDonateInProgress: false,
-  donatedBeam: 0,
-  donatedBeamX: 0
+  gasPrices: {},
+  rates: {},
 };
 
 const reducer = createReducer<AppStateType, Action>(initialState)
@@ -34,13 +32,16 @@ const reducer = createReducer<AppStateType, Action>(initialState)
     nexState.balance = action.payload;
   }))
   .handleAction(actions.setPopupState, (state, action) => produce(state, (nexState) => {
-    nexState.popupsState[action.payload.type] = action.payload.state;
+    // nexState.popupsState[action.payload.type] = action.payload.state;
   }))
-  .handleAction(actions.loadRate.success, (state, action) => produce(state, (nexState) => {
-    nexState.rate = action.payload;
+  .handleAction(actions.loadRates.success, (state, action) => produce(state, (nexState) => {
+    nexState.rates = action.payload;
   }))
   .handleAction(actions.setIsTrInProgress, (state, action) => produce(state, (nexState) => {
     nexState.isTrInProgress = action.payload;
+  }))
+  .handleAction(actions.loadGasPrices.success, (state, action) => produce(state, (nexState) => {
+    nexState.gasPrices = action.payload;
   }))
   .handleAction(actions.setIsApproveInProgress, (state, action) => produce(state, (nexState) => {
     nexState.isApproveInProgress = action.payload;

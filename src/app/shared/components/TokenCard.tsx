@@ -5,7 +5,7 @@ import { Box } from '@chakra-ui/react';
 import { ethers, utils } from 'ethers';
 import { floatFormat } from '@app/core/appUtils';
 import { CURRENCIES, CURRENCY_IDS } from '../constants';
-import { useAccount, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
+import { useAccount, useWriteContract } from 'wagmi';
 import { erc20Abi, maxUint256 } from 'viem';
 import { toast } from 'react-toastify';
 
@@ -15,6 +15,7 @@ interface TokenCardProps {
   title: string;
   icon: React.FC<React.SVGAttributes<SVGElement>>;
   balance?: bigint;
+  decimals?: number;
 }
 
 const CardStyled = styled.div<{
@@ -53,12 +54,13 @@ const TokenCard: React.FC<TokenCardProps> = ({
   title,
   icon,
   balance,
+  decimals,
   ...rest
 }) => {
   const Icon = icon;
   const cardTitle = title?.toUpperCase();
   const { address, chain: activeChain } = useAccount();
-  const weiBigNumberBalance = ethers.BigNumber.from(balance ? balance?.toString() : 0);
+  // const weiBigNumberBalance = ethers.BigNumber.from(balance ? balance?.toString() : 0);
   const { writeContract, data } = useWriteContract();
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -86,10 +88,6 @@ const TokenCard: React.FC<TokenCardProps> = ({
     });
   };
 
-  // const { isLoading: isTxLoading, isSuccess: isTxSuccess } = useWaitForTransactionReceipt({
-  //   hash: data
-  // });
-
   useEffect(() => {
     if (isLoading) {
       toast('Allowance update is complete');
@@ -101,7 +99,9 @@ const TokenCard: React.FC<TokenCardProps> = ({
     <CardStyled type={title} isWithBalance={balance !== undefined} {...rest}>
       <Icon style={{width: "30px", height: "30px"}}/>
       <BalanceStyled>
-        <BalanceValue>{floatFormat(utils.formatEther(weiBigNumberBalance))} {cardTitle}</BalanceValue>
+        <BalanceValue>
+          { balance !== undefined ? floatFormat(utils.formatUnits(balance, decimals)) : ""} {cardTitle}
+        </BalanceValue>
       </BalanceStyled>
       <Box ml={"30px"}>
         {isToken && (
